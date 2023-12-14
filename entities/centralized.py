@@ -148,7 +148,7 @@ class Centralized:
             print(f'Accuracy for class: {classname:5s} is {accuracy:.1f} %')
     """
     def pipeline(self):
-        print('loading data')
+        print('loading data...')
         out_df = self.get_data()
         print('preprocessing')
         # dataframe of the dataset

@@ -15,7 +15,7 @@ if 'kaggle' not in path:
     from datasets.femnist import Femnist
 else:
     sys.path.append('datasets')
-    from femnist import Femnist
+    from datasets.femnist import Femnist
 
 
 

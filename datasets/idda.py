@@ -11,11 +11,7 @@ class_eval = [255, 2, 4, 255, 11, 5, 0, 0, 1, 8, 13, 3, 7, 6, 255, 255, 15, 14, 
 
 class IDDADataset(VisionDataset):
 
-    def __init__(self,
-                 root: str,
-                 list_samples: [str],
-                 transform: tr.Compose = None,
-                 client_name: str = None):
+    def __init__(self,root: str,list_samples: [str],transform: tr.Compose = None,client_name: str = None):
         super().__init__(root=root, transform=transform, target_transform=None)
         self.list_samples = list_samples
         self.client_name = client_name

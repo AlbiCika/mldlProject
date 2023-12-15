@@ -155,7 +155,7 @@ class Centralized:
         df = self.data_parser(out_df)
         del out_df
         print('Done')
-        n_classes = self.n_classes(df)
+        #n_classes = self.n_classes(df)
         # train and test tensors
         torch_train, torch_test = self.train_test_tensors(df)
         print('Training')

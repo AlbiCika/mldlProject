@@ -71,7 +71,7 @@ class Centralized:
         return df
     
     
-    def rotatedFemnist(dataframe):
+    def rotatedFemnist(self ,dataframe):
         rotated_images = []
         rotated_labels = []
         for index, row in dataframe.iterrows():

@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from torchvision import transforms
 import os
+from PIL import Image
 
 import os
 import sys
@@ -68,6 +69,39 @@ class Centralized:
                 df = pd.concat([df, temp_df], axis=1)  # ignore_index=True
         df = df.rename(index={0: "x", 1: "y"})
         return df
+    
+    def rotatedFemnist(self,dataframe):
+        rotated_images = []
+        rotated_labels = []
+        for index, row in dataframe.iterrows():
+            image_array = row[0]  # Assuming the image arrays are in the first column
+            label = row[1]  # Assuming the labels are in the second column
+            if image_array.shape != (784,):
+                print(f"Skipping row {index} due to incorrect array shape: {image_array.shape}")
+                continue
+
+            # Convert the 1D array to a 2D array (28x28 image assuming size is 784)
+            image_matrix = image_array.reshape(28,28)
+
+            # Randomly choose rotation angle from [0, 15, 30, 45, 60, 75]
+            angle = np.random.choice([0, 15, 30, 45, 60, 75])
+            # Rotate the image using PIL
+            image_matrix = (image_matrix * 255).astype(np.uint8)
+            
+            rotated_image = Image.fromarray(image_matrix)
+            rotated_image = rotated_image.rotate(angle)
+
+            # Convert the rotated image back to a numpy array
+            rotated_array = np.array(rotated_image).flatten()
+
+            rotated_images.append(rotated_array)
+            rotated_labels.append(label)
+
+    # Create a new DataFrame with rotated images and labels
+        rotated_df = pd.DataFrame({'img': rotated_images, 'class': rotated_labels})
+
+        return rotated_df
+        
 
     def train_test_tensors(self, batch):
         convert_tensor = transforms.ToTensor()
@@ -157,7 +191,9 @@ class Centralized:
         print('Done')
         #n_classes = self.n_classes(df)
         # train and test tensors
-        torch_train, torch_test = self.train_test_tensors(df)
+        rotated_df=self.rotatedFemnist(df)
+        del df
+        torch_train, torch_test = self.train_test_tensors(rotated_df)
         print('Training')
         self.training(torch_train)
         print('Done.')

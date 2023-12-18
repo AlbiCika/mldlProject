@@ -70,7 +70,8 @@ class Centralized:
         df = df.rename(index={0: "x", 1: "y"})
         return df
     
-    def rotatedFemnist(self,dataframe):
+    
+    def rotatedFemnist(dataframe):
         rotated_images = []
         rotated_labels = []
         for index, row in dataframe.iterrows():
@@ -92,15 +93,16 @@ class Centralized:
             rotated_image = rotated_image.rotate(angle)
 
             # Convert the rotated image back to a numpy array
-            rotated_array = np.array(rotated_image).flatten()
+            rotated_array = np.array(rotated_image,dtype=np.float32).flatten()/255.0
 
             rotated_images.append(rotated_array)
             rotated_labels.append(label)
 
-    # Create a new DataFrame with rotated images and labels
+        # Create a new DataFrame with rotated images and labels
         rotated_df = pd.DataFrame({'img': rotated_images, 'class': rotated_labels})
 
         return rotated_df
+
         
 
     def train_test_tensors(self, batch):
@@ -191,9 +193,10 @@ class Centralized:
         print('Done')
         #n_classes = self.n_classes(df)
         # train and test tensors
+        print('Rotating the dataset')
         rotated_df=self.rotatedFemnist(df)
         del df
-        torch_train, torch_test = self.train_test_tensors(rotated_df)
+        torch_train, torch_test = self.train_test_tensors(batch=rotated_df)
         print('Training')
         self.training(torch_train)
         print('Done.')

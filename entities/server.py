@@ -1,5 +1,6 @@
 import copy
 import pprint
+import math
 
 from collections import OrderedDict
 import numpy as np
@@ -24,8 +25,37 @@ class Server:
         The way selection is done is by only considering the min number between
         a pre-set value for num_clients arbitraily and then chose min 
         '''
-        num_clients = min(self.args.clients_per_round, len(self.train_clients))
-        sel_clients = np.random.choice(self.train_clients, num_clients, replace=False)
+        if self.args.client_select == 0:
+            num_clients = min(self.args.clients_per_round, len(self.train_clients))
+            sel_clients = np.random.choice(self.train_clients, num_clients, replace=False)
+        
+        elif self.args.client_select == 1:  
+            num_clients = min(self.args.clients_per_round, len(self.train_clients))
+            """
+            with 10% of clients being selected with probability 0.5 at each round
+            with 30% of clients being selected with probability 0.0001 at each round
+            """
+            n10perc = math.ceil(len(self.train_clients)*0.1)
+            list_client10 =  self.train_clients[:n10perc]
+            list_client90 = self.train_clients[n10perc:]
+            list_p10 = [1/n10perc] * n10perc
+            list_p90 = [1/(len(self.train_clients)-n10perc)] * (len(self.train_clients)-n10perc)
+            sel_clients = []
+            i=0
+            while i != (num_clients):
+                if np.random.random() < 0.5:
+                    c = np.random.choice(list_client10, p=list_p10, replace=False)
+                    if c not in sel_clients:
+                        sel_clients.append(c)
+                        i+=1
+                else:
+                    c = np.random.choice(list_client90, p=list_p90, replace=False)
+                    if c not in sel_clients:
+                        sel_clients.append(c)
+                        i+=1
+            
+            print(f'len clients:{len(sel_clients)}')
+            print(f'selected client: {sel_clients}')
         return sel_clients
 
     def train_round(self, clients):
@@ -46,17 +76,20 @@ class Server:
             # which outputs model.state_dic 
             # which has as keys 'layer_weights':
             # layer_bias: 
-            client_update = c.train()
-            updates.append(client_update)
+            num_samples,client_update = c.train()
+            updates.append((num_samples,copy.deepcopy(client_update))) #deep copy to not change the original dictionary of client
         return updates
 
     def aggregate(self, updates):
-
+        """
         # our addition
         """
+        """"
         This method handles the FedAvg aggregation
         :param updates: updates received from the clients
         :return: aggregated parameters
+        """
+    
         """
         if len(updates) == 0:
             # the original model
@@ -78,8 +111,31 @@ class Server:
 
             # Average the weights
             averaged_state_dict[layer_name] /= len(updates)
+        """
+            
+        total_client_sample = 0.
+        base = OrderedDict()
+        for (client_samples, client_model) in updates:
+            total_client_sample += client_samples
+            for key, value in client_model.items():
+                if key in base:
+                    base[key] += (client_samples * value.type(torch.FloatTensor))
+                else:
+                    base[key] = (client_samples * value.type(torch.FloatTensor))
+                
 
-        return averaged_state_dict
+        averaged_soln = copy.deepcopy(self.model.state_dict())
+        for key, value in base.items():
+            if total_client_sample != 0:
+                averaged_soln[key] = value.cuda() / total_client_sample
+        return averaged_soln
+    
+    
+    def update_clients_model(self,aggregated_params):
+        for i, c in enumerate(self.train_clients):
+            c.model.load_state_dict(aggregated_params)
+        
+    
 
     def train(self):
         '''
@@ -92,6 +148,8 @@ class Server:
             # our addition
             # take selected clients
             sel_clients = self.select_clients()
+            if r != 0:
+                self.update_clients_model(aggregated_params=aggregated_params)
             print(f"Round {r + 1}/{self.args.num_rounds}")
 
             # Train the model on the selected clients 
@@ -107,16 +165,16 @@ class Server:
             # we call the method model.load_state_dict from the "module" class
 
             self.model.load_state_dict(aggregated_params)
-
+            
             # Evaluate on the train clients
-            train_accuracy = self.eval_train(sel_clients)
+            train_accuracy = self.eval_train(sel_clients,aggregated_params)
             print(f"Train Accuracy for round {r + 1} is : {train_accuracy:.4f}")
 
             # Test on the test clients
-            test_accuracy = self.test()
+            test_accuracy = self.test(aggregated_params)
             print(f"Test Accuracy for round {r + 1}: {test_accuracy:.4f}")
 
-    def eval_train(self, clients):
+    def eval_train(self, clients, aggregated_params):
         """
         This method handles the evaluation on the train clients
         """
@@ -125,13 +183,14 @@ class Server:
         total_samples = 0
         with torch.no_grad():
             for client in clients:
+                client.model.load_state_dict(aggregated_params)
                 client_samples, client_correct = client.test(self.metrics, 'eval_train')
                 total_correct += client_correct
                 total_samples += client_samples
         accuracy = total_correct / total_samples
         return accuracy
 
-    def test(self):
+    def test(self,aggregated_params):
         """
         This method handles the evaluation of the test_clients
         """
@@ -139,6 +198,7 @@ class Server:
         total_samples = 0
         with torch.no_grad():
             for client in self.test_clients:  # we don't select for test we run it on all
+                client.model.load_state_dict(aggregated_params)
                 client_samples, client_correct = client.test(self.metrics, 'test')
                 total_correct += client_correct
                 total_samples += client_samples

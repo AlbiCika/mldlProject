@@ -6,11 +6,13 @@ import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from torchvision import transforms
+from torchsummary import summary
 import os
 from PIL import Image
 
 import os
 import sys
+
 path = os.getcwd()
 if 'kaggle' not in path:
     from datasets.femnist import Femnist
@@ -18,27 +20,23 @@ else:
     sys.path.append('datasets')
     from femnist import Femnist
 
-
-
 IMAGE_SIZE = 28
-
-
-
-
 
 
 class Centralized:
 
-    def __init__(self, data_path, model, optimizer, criterion, device, transforms):
+    def __init__(self, data_path, model, optimizer, criterion, device, transforms, args):
         self.path = data_path
         self.model = model
         self.optimizer = optimizer
         self.criterion = criterion
         self.device = device
         self.transforms = transforms
+        self.args = args
 
     def n_classes(self, batch):
         return batch['class'].unique().shape[0]
+
     def data_parser(self, df):
         """
         takes a dataframe sorted by writers and unpacks the data
@@ -61,7 +59,7 @@ class Centralized:
         print('loading files.....')
         for dirname, _, filenames in os.walk(self.path):
             for filename in filenames:
-                #print(filename)
+                # print(filename)
                 data = json.load(open(os.path.join(dirname, filename)))
 
                 temp_df = pd.DataFrame(data['user_data'])
@@ -69,9 +67,8 @@ class Centralized:
                 df = pd.concat([df, temp_df], axis=1)  # ignore_index=True
         df = df.rename(index={0: "x", 1: "y"})
         return df
-    
-    
-    def rotatedFemnist(self ,dataframe):
+
+    def rotatedFemnist(self, dataframe):
         rotated_images = []
         rotated_labels = []
         for index, row in dataframe.iterrows():
@@ -82,18 +79,18 @@ class Centralized:
                 continue
 
             # Convert the 1D array to a 2D array (28x28 image assuming size is 784)
-            image_matrix = image_array.reshape(28,28)
+            image_matrix = image_array.reshape(28, 28)
 
             # Randomly choose rotation angle from [0, 15, 30, 45, 60, 75]
             angle = np.random.choice([0, 15, 30, 45, 60, 75])
             # Rotate the image using PIL
             image_matrix = (image_matrix * 255).astype(np.uint8)
-            
+
             rotated_image = Image.fromarray(image_matrix)
             rotated_image = rotated_image.rotate(angle)
 
             # Convert the rotated image back to a numpy array
-            rotated_array = np.array(rotated_image,dtype=np.float32).flatten()/255.0
+            rotated_array = np.array(rotated_image, dtype=np.float32).flatten() / 255.0
 
             rotated_images.append(rotated_array)
             rotated_labels.append(label)
@@ -102,8 +99,6 @@ class Centralized:
         rotated_df = pd.DataFrame({'img': rotated_images, 'class': rotated_labels})
 
         return rotated_df
-
-        
 
     def train_test_tensors(self, batch):
         convert_tensor = transforms.ToTensor()
@@ -119,9 +114,9 @@ class Centralized:
 
     def training(self, torch_train):
 
-        train_loader = DataLoader(torch_train, batch_size=64, shuffle=True)
+        train_loader = DataLoader(torch_train, batch_size=self.args.bs, shuffle=True)
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        for epoch in range(5):  # loop over the dataset multiple times
+        for epoch in range(self.args.epochs):  # loop over the dataset multiple times
             running_loss = 0.0
             for i, data in enumerate(train_loader, 0):
                 # get the inputs; data is a list of [inputs, labels]
@@ -159,30 +154,8 @@ class Centralized:
 
         print(f'Accuracy of the network on the 10000 test images: {100 * correct // total} %')
 
-    """
-    def accuracy_for_class(self, val_loader, classes):
-        # prepare to count predictions for each class
-        correct_pred = {classname: 0 for classname in range(classes)}
-        total_pred = {classname: 0 for classname in range(classes)}
 
-        # again no gradients needed
-        with torch.no_grad():
-            for data in val_loader:
-                images, labels = data
-                images, labels = images.cuda(), labels.cuda()
-                outputs = self.model(images)
-                _, predictions = torch.max(outputs, 1)
-                # collect the correct predictions for each class
-                for label, prediction in zip(labels, predictions):
-                    if label == prediction:
-                        correct_pred[classes[label]] += 1
-                    total_pred[classes[label]] += 1
 
-        # print accuracy for each class
-        for classname, correct_count in correct_pred.items():
-            accuracy = 100 * float(correct_count) / total_pred[classname]
-            print(f'Accuracy for class: {classname:5s} is {accuracy:.1f} %')
-    """
     def pipeline(self):
         print('loading data...')
         out_df = self.get_data()
@@ -191,17 +164,21 @@ class Centralized:
         df = self.data_parser(out_df)
         del out_df
         print('Done')
-        #n_classes = self.n_classes(df)
+        # n_classes = self.n_classes(df)
         # train and test tensors
-        print('Rotating the dataset')
-        rotated_df=self.rotatedFemnist(df)
-        del df
-        torch_train, torch_test = self.train_test_tensors(batch=rotated_df)
+        if self.args.rotation:
+            print('Rotating the dataset')
+            rotated_df = self.rotatedFemnist(df)
+            del df
+            torch_train, torch_test = self.train_test_tensors(batch=rotated_df)
+        else:
+            torch_train, torch_test = self.train_test_tensors(batch=df)
         print('Training')
         self.training(torch_train)
         print('Done.')
         # printing accuracy
-        val_loader = DataLoader(torch_test, batch_size=64, shuffle=False)
+        val_loader = DataLoader(torch_test, batch_size=self.args.bs, shuffle=False)
         print('Validating')
         self.accuracy_of_model(val_loader)
-
+        print('Summary')
+        print(summary(self.model))

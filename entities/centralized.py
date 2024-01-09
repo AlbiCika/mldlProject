@@ -166,13 +166,13 @@ class Centralized:
         print('Done')
         # n_classes = self.n_classes(df)
         # train and test tensors
-        if self.args.rotation:
-            print('Rotating the dataset')
-            rotated_df = self.rotatedFemnist(df)
-            del df
-            torch_train, torch_test = self.train_test_tensors(batch=rotated_df)
-        else:
-            torch_train, torch_test = self.train_test_tensors(batch=df)
+        #if self.args.rotation:
+        #    print('Rotating the dataset')
+        #    rotated_df = self.rotatedFemnist(df)
+        #    del df
+        #    torch_train, torch_test = self.train_test_tensors(batch=rotated_df)
+        #else:
+        torch_train, torch_test = self.train_test_tensors(batch=df)
         print('Training')
         self.training(torch_train)
         print('Done.')

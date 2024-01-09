@@ -70,6 +70,7 @@ class Centralized:
         df = df.rename(index={0: "x", 1: "y"})
         return df
     
+
     def get_data_rot_ng(self):
         df=pd.DataFrame()
         print('loading rotated files')
@@ -174,7 +175,8 @@ class Centralized:
 
     def pipeline(self):
         print('loading data...')
-        out_df = self.get_data()
+        if self.args.rotation:
+            out_df = self.get_data_rot_ng()
         print('preprocessing')
         # dataframe of the dataset
         df = self.data_parser(out_df)
@@ -183,12 +185,9 @@ class Centralized:
         print('Done')
         n_classes = self.n_classes(df)
         # train and test tensors
-        if self.args.rotation:
-            rotated_df = self.get_data_rot_ng(df)
-            del df
         #    torch_train, torch_test = self.train_test_tensors(batch=rotated_df)
         #else:
-        torch_train, torch_test = self.train_test_tensors(batch=rotated_df)
+        torch_train, torch_test = self.train_test_tensors(batch=df)
         print('Training')
         self.training(torch_train)
         print('Done.')

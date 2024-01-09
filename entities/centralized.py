@@ -59,7 +59,7 @@ class Centralized:
         print('loading files.....')
         for dirname, _, filenames in os.walk(self.path):
             for filename in filenames:
-                # print(filename)
+                print(filename)
                 data = json.load(open(os.path.join(dirname, filename)))
 
                 temp_df = pd.DataFrame(data['user_data'])
@@ -164,7 +164,7 @@ class Centralized:
         df = self.data_parser(out_df)
         del out_df
         print('Done')
-        # n_classes = self.n_classes(df)
+        #n_classes = self.n_classes(df)
         # train and test tensors
         #if self.args.rotation:
         #    print('Rotating the dataset')

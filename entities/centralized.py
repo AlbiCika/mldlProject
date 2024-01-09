@@ -9,6 +9,8 @@ from torchvision import transforms
 from torchsummary import summary
 import os
 from PIL import Image
+from utils import data_generation
+import random
 
 import os
 import sys
@@ -67,6 +69,20 @@ class Centralized:
                 df = pd.concat([df, temp_df], axis=1)  # ignore_index=True
         df = df.rename(index={0: "x", 1: "y"})
         return df
+    
+    def get_data_rot_ng(self):
+        df=pd.DataFrame()
+        print('loading rotated files')
+        datasets=data_generation.get_datasets(self.args)
+        for dataset in datasets.items():
+            temp_df = pd.DataFrame(dataset['user_data'])
+            temp_df = temp_df.reset_index(drop=True)
+            df = pd.concat([df, temp_df], axis=1)
+        df = df.rename(index={0: "x", 1: "y"})
+        return df
+
+
+
 
     def rotatedFemnist(self, dataframe):
         rotated_images = []
@@ -163,16 +179,16 @@ class Centralized:
         # dataframe of the dataset
         df = self.data_parser(out_df)
         del out_df
+        print(df.head())
         print('Done')
         n_classes = self.n_classes(df)
         # train and test tensors
-        #if self.args.rotation:
-        #    print('Rotating the dataset')
-        #    rotated_df = self.rotatedFemnist(df)
-        #    del df
+        if self.args.rotation:
+            rotated_df = self.get_data_rot_ng(df)
+            del df
         #    torch_train, torch_test = self.train_test_tensors(batch=rotated_df)
         #else:
-        torch_train, torch_test = self.train_test_tensors(batch=df)
+        torch_train, torch_test = self.train_test_tensors(batch=rotated_df)
         print('Training')
         self.training(torch_train)
         print('Done.')

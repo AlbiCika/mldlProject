@@ -116,7 +116,7 @@ class Centralized:
 
         train_loader = DataLoader(torch_train, batch_size=self.args.bs, shuffle=True)
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        for epoch in range(self.args.epochs):  # loop over the dataset multiple times
+        for epoch in range(self.args.num_epochs):  # loop over the dataset multiple times
             running_loss = 0.0
             for i, data in enumerate(train_loader, 0):
                 # get the inputs; data is a list of [inputs, labels]

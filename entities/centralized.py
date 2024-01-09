@@ -76,7 +76,7 @@ class Centralized:
         print('loading rotated files')
         datasets=data_generation.get_datasets(self.args)
         for dataset in datasets.items():
-            temp_df = pd.DataFrame(dataset['user_data'])
+            temp_df = pd.DataFrame(dataset)
             temp_df = temp_df.reset_index(drop=True)
             df = pd.concat([df, temp_df], axis=1)
         df = df.rename(index={0: "x", 1: "y"})

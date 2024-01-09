@@ -165,7 +165,7 @@ def main():
         criterion = nn.CrossEntropyLoss()
         data_transform = transforms.ToTensor()
         centralized = Centralized(data_path=data_path, model=model, optimizer=optimizer, criterion=criterion,
-                                  device=device, transforms=data_transform)
+                                  device=device, transforms=data_transform,args=args)
         centralized.pipeline()
 
 

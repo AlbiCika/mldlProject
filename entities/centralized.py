@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader ,random_split ,Subset
 from torchvision import transforms
 from torchsummary import summary
 import os
@@ -72,18 +72,11 @@ class Centralized:
     
 
     def get_data_rot_ng(self):
-        df=pd.DataFrame()
+
         print('loading rotated files')
         datasets=data_generation.get_datasets(self.args)
         print('finished')
-        for dataset in datasets.items():
-            temp_df = pd.DataFrame(dataset)
-            temp_df = temp_df.reset_index(drop=True)
-            df = pd.concat([df, temp_df], axis=1)
-        df = df.rename(index={0: "x", 1: "y"})
-        print(df.head())
-        print(df.describe())
-        return df
+        return datasets
 
 
 
@@ -132,6 +125,14 @@ class Centralized:
 
         return torch_train, torch_test
 
+    def train_test_tensors_rot_ng(self, datasets):
+        #receive a tuple of objects and split in train and test
+        train_size = int(0.8 * len(datasets))
+        test_size = len(datasets) - train_size
+        # Create random train/test splits
+        train_subset, test_subset = random_split(datasets, [train_size, test_size])
+        return train_subset ,test_subset
+
     def training(self, torch_train):
 
         train_loader = DataLoader(torch_train, batch_size=self.args.bs, shuffle=True)
@@ -177,20 +178,22 @@ class Centralized:
 
 
     def pipeline(self):
-        print('loading data...')
+        #print('loading data...')
+        print('loading datasets...')
         if self.args.rotation:
-            out_df = self.get_data_rot_ng()
-        print('preprocessing')
+            datasets = self.get_data_rot_ng()
+        #print('preprocessing')
         # dataframe of the dataset
-        df = self.data_parser(out_df)
-        del out_df
-        print(df.head())
+        #df = self.data_parser(out_df)
+        #del out_df
+        #print(df.head())
         print('Done')
-        n_classes = self.n_classes(df)
+        #n_classes = self.n_classes(df)
         # train and test tensors
         #    torch_train, torch_test = self.train_test_tensors(batch=rotated_df)
         #else:
-        torch_train, torch_test = self.train_test_tensors(batch=df)
+        print("splitting datasets")
+        torch_train, torch_test = self.train_test_tensors_rot_ng(datasets)
         print('Training')
         self.training(torch_train)
         print('Done.')

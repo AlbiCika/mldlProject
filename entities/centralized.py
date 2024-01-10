@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader ,random_split ,Subset
+from torch.utils.data import DataLoader ,random_split ,Subset ,ConcatDataset
 from torchvision import transforms
 from torchsummary import summary
 import os
@@ -126,11 +126,13 @@ class Centralized:
         return torch_train, torch_test
 
     def train_test_tensors_rot_ng(self, datasets):
+
+        all_datasets = [dataset for dataset_list in datasets.values() for dataset in dataset_list]
         #receive a tuple of objects and split in train and test
-        train_size = int(0.8 * len(datasets))
-        test_size = len(datasets) - train_size
+        train_size = int(0.8 * len(all_datasets))
+        test_size = len(all_datasets) - train_size
         # Create random train/test splits
-        train_subset, test_subset = random_split(datasets, [train_size, test_size])
+        train_subset, test_subset = random_split(all_datasets, [train_size, test_size])
         return train_subset ,test_subset
 
     def training(self, torch_train):

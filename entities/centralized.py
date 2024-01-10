@@ -18,15 +18,16 @@ import sys
 path = os.getcwd()
 if 'kaggle' not in path:
     from datasets.femnist import Femnist
+    from datasets.MergedFemnist import MergedFemnist
 else:
     sys.path.append('datasets')
     from femnist import Femnist
+    from datasets.MergedFemnist import MergedFemnist
 
 IMAGE_SIZE = 28
 
 
 class Centralized:
-
     def __init__(self, data_path, model, optimizer, criterion, device, transforms, args):
         self.path = data_path
         self.model = model
@@ -63,7 +64,6 @@ class Centralized:
             for filename in filenames:
                 print(filename)
                 data = json.load(open(os.path.join(dirname, filename)))
-
                 temp_df = pd.DataFrame(data['user_data'])
                 temp_df = temp_df.reset_index(drop=True)
                 df = pd.concat([df, temp_df], axis=1)  # ignore_index=True
@@ -72,13 +72,10 @@ class Centralized:
     
 
     def get_data_rot_ng(self):
-
         print('loading rotated files')
         datasets=data_generation.get_datasets(self.args)
         print('finished')
         return datasets
-
-
 
 
     def rotatedFemnist(self, dataframe):
@@ -90,28 +87,22 @@ class Centralized:
             if image_array.shape != (784,):
                 print(f"Skipping row {index} due to incorrect array shape: {image_array.shape}")
                 continue
-
             # Convert the 1D array to a 2D array (28x28 image assuming size is 784)
             image_matrix = image_array.reshape(28, 28)
-
             # Randomly choose rotation angle from [0, 15, 30, 45, 60, 75]
             angle = np.random.choice([0, 15, 30, 45, 60, 75])
             # Rotate the image using PIL
             image_matrix = (image_matrix * 255).astype(np.uint8)
-
             rotated_image = Image.fromarray(image_matrix)
             rotated_image = rotated_image.rotate(angle)
-
             # Convert the rotated image back to a numpy array
             rotated_array = np.array(rotated_image, dtype=np.float32).flatten() / 255.0
-
             rotated_images.append(rotated_array)
             rotated_labels.append(label)
-
         # Create a new DataFrame with rotated images and labels
         rotated_df = pd.DataFrame({'img': rotated_images, 'class': rotated_labels})
-
         return rotated_df
+
 
     def train_test_tensors(self, batch):
         convert_tensor = transforms.ToTensor()
@@ -122,8 +113,8 @@ class Centralized:
         torch_test = Femnist(
             {'x': X_val.tolist(), 'y': y_val.tolist()},
             self.transforms, '')
-
         return torch_train, torch_test
+
 
     def train_test_tensors_rot_ng(self, datasets):
 
@@ -133,7 +124,10 @@ class Centralized:
         test_size = len(all_datasets) - train_size
         # Create random train/test splits
         train_subset, test_subset = random_split(all_datasets, [train_size, test_size])
-        return train_subset ,test_subset
+        torch_train = MergedFemnist(train_subset)
+        torch_test = MergedFemnist(test_subset)
+
+        return torch_train ,torch_test
 
     def training(self, torch_train):
 
@@ -152,7 +146,6 @@ class Centralized:
                 loss = self.criterion(outputs, labels)
                 loss.backward()
                 self.optimizer.step()
-
                 # print statistics
                 running_loss += loss.item()
                 if i % 2000 == 1999:  # print every 2000 mini-batches

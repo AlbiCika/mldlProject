@@ -2,7 +2,9 @@ import sys
 import os
 from torchvision import transforms
 from collections import defaultdict
+from torch.utils.data import ConcatDataset
 import json
+from tqdm import tqdm
 
 path = os.getcwd()
 if 'kaggle' not in path:
@@ -20,7 +22,7 @@ def read_femnist_dir(data_dir):
     data = defaultdict(lambda: {})
     files = os.listdir(data_dir)
     files = [f for f in files if f.endswith('.json')]
-    for f in files:
+    for f in tqdm(files):
         file_path = os.path.join(data_dir, f)
         with open(file_path, 'r') as inf:
             cdata = json.load(inf)
@@ -28,12 +30,18 @@ def read_femnist_dir(data_dir):
     return data
 
 
-def read_femnist_data(train_data_dir, test_data_dir=None):
+def read_femnist_data(train_data_dir, test_data_dir=None, args=None):
     """
     If only one directory was given, the function returns the
     all_data folder content
     """
     if test_data_dir:
+        if args.rotation:
+            data = read_femnist_dir(train_data_dir)
+            data_test = read_femnist_dir(test_data_dir)
+            for key, val in data_test.items():
+                data[key] = val
+            return data
         return read_femnist_dir(train_data_dir), read_femnist_dir(test_data_dir)
     else:
         return read_femnist_dir(train_data_dir)
@@ -73,7 +81,11 @@ def get_datasets(args):
         niid = args.niid
         train_data_dir = os.path.join('data', 'femnist', 'data', 'niid' if niid else 'iid', 'train')
         test_data_dir = os.path.join('data', 'femnist', 'data', 'niid' if niid else 'iid', 'test')
-        train_data, test_data = read_femnist_data(train_data_dir, test_data_dir)
+
+        if args.rotation:
+            train_data = read_femnist_data(train_data_dir, test_data_dir, args)
+        else:
+            train_data, test_data = read_femnist_data(train_data_dir, test_data_dir)
 
         if args.rotation:
             train_rotations = {
@@ -129,22 +141,23 @@ def get_datasets(args):
                 if count < 1000:
 
                     if count <= 170:
-                        train_rotations['0'].append(Femnist(data, rot_transforms['0'], user))
+                        train_rotations['0'].append(Femnist(data, rot_transforms['0'], ''))
                     elif 170 < count <= 336:
-                        train_rotations['15'].append(Femnist(data, rot_transforms['15'], user))
+                        train_rotations['15'].append(Femnist(data, rot_transforms['15'], ''))
                     elif 336 < count <= 502:
-                        train_rotations['30'].append(Femnist(data, rot_transforms['30'], user))
+                        train_rotations['30'].append(Femnist(data, rot_transforms['30'], ''))
                     elif 502 < count <= 668:
-                        train_rotations['45'].append(Femnist(data, rot_transforms['45'], user))
+                        train_rotations['45'].append(Femnist(data, rot_transforms['45'], ''))
                     elif 668 < count <= 834:
-                        train_rotations['60'].append(Femnist(data, rot_transforms['60'], user))
+                        train_rotations['60'].append(Femnist(data, rot_transforms['60'], ''))
                     elif 834 < count:
-                        train_rotations['75'].append(Femnist(data, rot_transforms['75'], user))
+                        train_rotations['75'].append(Femnist(data, rot_transforms['75'], ''))
                     count += 1
                 else:
                     break
             return train_rotations
         else:
-            for user, data in all_data:
-                centralized_datasets.append(Femnist(data, train_transforms, user))
-            return centralized_datasets
+            for user, data in all_data.items():
+                centralized_datasets.append(Femnist(data, train_transforms, ''))
+            return ConcatDataset(centralized_datasets)
+

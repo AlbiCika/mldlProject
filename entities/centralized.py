@@ -4,13 +4,12 @@ import numpy as np
 import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader ,random_split ,Subset ,ConcatDataset
+from torch.utils.data import DataLoader, ConcatDataset, random_split
 from torchvision import transforms
 from torchsummary import summary
+from torch import nn
 import os
 from PIL import Image
-from utils import data_generation
-import random
 
 import os
 import sys
@@ -18,24 +17,25 @@ import sys
 path = os.getcwd()
 if 'kaggle' not in path:
     from datasets.femnist import Femnist
-    from datasets.MergedFemnist import MergedFemnist
 else:
     sys.path.append('datasets')
     from femnist import Femnist
-    from datasets.MergedFemnist import MergedFemnist
 
 IMAGE_SIZE = 28
 
 
 class Centralized:
-    def __init__(self, data_path, model, optimizer, criterion, device, transforms, args):
-        self.path = data_path
+
+    def __init__(self, data, model, args, metrics):
+        self.data = data
         self.model = model
-        self.optimizer = optimizer
-        self.criterion = criterion
-        self.device = device
-        self.transforms = transforms
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.optimizer = torch.optim.SGD(model.parameters(),
+                                    lr=args.lr, momentum=args.m,
+                                    weight_decay=args.wd)  # define loss function criterion = nn.CrossEntropyLoss()
+        self.criterion = nn.CrossEntropyLoss()
         self.args = args
+        self.metrics = metrics
 
     def n_classes(self, batch):
         return batch['class'].unique().shape[0]
@@ -62,21 +62,14 @@ class Centralized:
         print('loading files.....')
         for dirname, _, filenames in os.walk(self.path):
             for filename in filenames:
-                print(filename)
+                # print(filename)
                 data = json.load(open(os.path.join(dirname, filename)))
+
                 temp_df = pd.DataFrame(data['user_data'])
                 temp_df = temp_df.reset_index(drop=True)
                 df = pd.concat([df, temp_df], axis=1)  # ignore_index=True
         df = df.rename(index={0: "x", 1: "y"})
         return df
-    
-
-    def get_data_rot_ng(self):
-        print('loading rotated files')
-        datasets=data_generation.get_datasets(self.args)
-        print('finished')
-        return datasets
-
 
     def rotatedFemnist(self, dataframe):
         rotated_images = []
@@ -87,22 +80,28 @@ class Centralized:
             if image_array.shape != (784,):
                 print(f"Skipping row {index} due to incorrect array shape: {image_array.shape}")
                 continue
+
             # Convert the 1D array to a 2D array (28x28 image assuming size is 784)
             image_matrix = image_array.reshape(28, 28)
+
             # Randomly choose rotation angle from [0, 15, 30, 45, 60, 75]
             angle = np.random.choice([0, 15, 30, 45, 60, 75])
             # Rotate the image using PIL
             image_matrix = (image_matrix * 255).astype(np.uint8)
+
             rotated_image = Image.fromarray(image_matrix)
             rotated_image = rotated_image.rotate(angle)
+
             # Convert the rotated image back to a numpy array
             rotated_array = np.array(rotated_image, dtype=np.float32).flatten() / 255.0
+
             rotated_images.append(rotated_array)
             rotated_labels.append(label)
+
         # Create a new DataFrame with rotated images and labels
         rotated_df = pd.DataFrame({'img': rotated_images, 'class': rotated_labels})
-        return rotated_df
 
+        return rotated_df
 
     def train_test_tensors(self, batch):
         convert_tensor = transforms.ToTensor()
@@ -113,21 +112,19 @@ class Centralized:
         torch_test = Femnist(
             {'x': X_val.tolist(), 'y': y_val.tolist()},
             self.transforms, '')
-        return torch_train, torch_test
 
+        return torch_train, torch_test
 
     def train_test_tensors_rot_ng(self, datasets):
 
-        all_datasets = [dataset for dataset_list in datasets.values() for dataset in dataset_list]
-        #receive a tuple of objects and split in train and test
-        train_size = int(0.8 * len(all_datasets))
-        test_size = len(all_datasets) - train_size
+        if self.args.rotation:
+            datasets = ConcatDataset([dataset for dataset_list in datasets.values() for dataset in dataset_list])
+        # receive a tuple of objects and split in train and test
+        train_size = int(0.8 * len(datasets))
+        test_size = len(datasets) - train_size
         # Create random train/test splits
-        train_subset, test_subset = random_split(all_datasets, [train_size, test_size])
-        torch_train = MergedFemnist(train_subset)
-        torch_test = MergedFemnist(test_subset)
-
-        return torch_train ,torch_test
+        train_subset, test_subset = random_split(datasets, [train_size, test_size])
+        return train_subset, test_subset
 
     def training(self, torch_train):
 
@@ -146,6 +143,7 @@ class Centralized:
                 loss = self.criterion(outputs, labels)
                 loss.backward()
                 self.optimizer.step()
+
                 # print statistics
                 running_loss += loss.item()
                 if i % 2000 == 1999:  # print every 2000 mini-batches
@@ -173,22 +171,23 @@ class Centralized:
 
 
     def pipeline(self):
-        #print('loading data...')
-        print('loading datasets...')
-        if self.args.rotation:
-            datasets = self.get_data_rot_ng()
-        #print('preprocessing')
-        # dataframe of the dataset
-        #df = self.data_parser(out_df)
-        #del out_df
-        #print(df.head())
-        print('Done')
-        #n_classes = self.n_classes(df)
-        # train and test tensors
-        #    torch_train, torch_test = self.train_test_tensors(batch=rotated_df)
-        #else:
-        print("splitting datasets")
-        torch_train, torch_test = self.train_test_tensors_rot_ng(datasets)
+        # print('loading data...')
+        # out_df = self.get_data()
+        # print('preprocessing')
+        # # dataframe of the dataset
+        # df = self.data_parser(out_df)
+        # del out_df
+        # print('Done')
+        # # n_classes = self.n_classes(df)
+        # # train and test tensors
+        # if self.args.rotation:
+        #     print('Rotating the dataset')
+        #     rotated_df = self.rotatedFemnist(df)
+        #     del df
+        #     torch_train, torch_test = self.train_test_tensors(batch=rotated_df)
+        # else:
+        #     torch_train, torch_test = self.train_test_tensors(batch=df)
+        torch_train, torch_test = self.train_test_tensors_rot_ng(self.data)
         print('Training')
         self.training(torch_train)
         print('Done.')
@@ -196,5 +195,5 @@ class Centralized:
         val_loader = DataLoader(torch_test, batch_size=self.args.bs, shuffle=False)
         print('Validating')
         self.accuracy_of_model(val_loader)
-        print('Summary')
-        print(summary(self.model))
+        # print('Summary')
+        # print(summary(self.model))

@@ -30,7 +30,10 @@ IMAGE_SIZE = 28
 
 class Femnist(Dataset):
 
-    def __init__(self,data: dict,transform: tr.Compose,client_name: str):
+    def __init__(self,
+                 data: dict,
+                 transform: tr.Compose,
+                 client_name: str):
         super().__init__()
         self.samples = [(image, label) for image, label in zip(data['x'], data['y'])]
         self.transform = transform

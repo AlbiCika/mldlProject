@@ -62,7 +62,7 @@ class Client:
         z_dist = distributions.Independent(distributions.normal.Normal(z_mu,z_sigma),1)
         z = z_dist.rsample([num_samples]).view([-1,self.z_dim])
         print('Im in featurize')
-        print(z.shape())
+        print(z.shape)
         if return_dist:
             return z, (z_mu,z_sigma)
         else:
@@ -70,13 +70,13 @@ class Client:
     
     def classify(self,z):
         print('im in classify')
-        print(z.shape())
+        print(z.shape)
         fc1 = nn.Linear(7 * 7 * 64, 2048).to(z.device)
         fc2 = nn.Linear(2048, self.args.num_classes).to(z.device)
         x = F.relu(fc1(z))
         x = fc2(x)
         print('im in classify')
-        print(x.shape())
+        print(x.shape)
         return x
 
     def run_epoch(self):
@@ -98,7 +98,7 @@ class Client:
             z,(z_mu,z_sigma) = self.featurize(images,return_dist=True)
             logits = self.classify(z)
             print('im after logits')
-            print(logits.shape() , labels.shape())
+            print(logits.shape , labels.shape)
             loss = self.criterion(logits, labels)
             obj = loss
             regL2R = torch.zeros_like(obj)

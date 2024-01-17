@@ -22,6 +22,7 @@ class Client:
         self.name = self.dataset.client_name
         self.model = model
         self.idx = idx
+        self.z_dim=3136
         self.train_loader = DataLoader(self.dataset, batch_size=self.args.bs,shuffle=True) if not test_client else None  # ,drop_last=True
         self.test_loader = DataLoader(self.dataset, batch_size=1, shuffle=False)
         self.optimizer = optimizer
@@ -29,10 +30,9 @@ class Client:
         self.reduction = HardNegativeMining() if self.args.hnm else MeanReduction()
         self.len_dataset = len(self.dataset)
         self.pk = None
-        self.r_mu = nn.Parameter(torch.zeros(args.num_classes,args.z_dim))
-        self.r_sigma = nn.Parameter(torch.ones(args.num_classes,args.z_dim))
+        self.r_mu = nn.Parameter(torch.zeros(args.num_classes,self.z_dim))
+        self.r_sigma = nn.Parameter(torch.ones(args.num_classes,self.z_dim))
         self.C = nn.Parameter(torch.ones([]))
-        self.z_dim=3136
 
 
     def __str__(self):

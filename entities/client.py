@@ -5,7 +5,8 @@ from torch import optim, nn
 from collections import defaultdict
 from torch.utils.data import DataLoader
 import threading
-
+import torch.nn.functional as F
+import torch.distributions as distributions
 from utils.utils import HardNegativeMining, MeanReduction
 import torch.nn.utils.prune as prune
 
@@ -21,14 +22,17 @@ class Client:
         self.name = self.dataset.client_name
         self.model = model
         self.idx = idx
-        self.train_loader = DataLoader(self.dataset, batch_size=self.args.bs,
-                                       shuffle=True) if not test_client else None  # ,drop_last=True
+        self.train_loader = DataLoader(self.dataset, batch_size=self.args.bs,shuffle=True) if not test_client else None  # ,drop_last=True
         self.test_loader = DataLoader(self.dataset, batch_size=1, shuffle=False)
         self.optimizer = optimizer
         self.criterion = nn.CrossEntropyLoss(ignore_index=255, reduction='mean')
         self.reduction = HardNegativeMining() if self.args.hnm else MeanReduction()
         self.len_dataset = len(self.dataset)
         self.pk = None
+        self.r_mu = nn.Parameter(torch.zeros(args.num_classes,args.z_dim))
+        self.r_sigma = nn.Parameter(torch.ones(args.num_classes,args.z_dim))
+        self.C = nn.Parameter(torch.ones([]))
+
 
     def __str__(self):
         return self.idx
@@ -46,6 +50,24 @@ class Client:
         if self.args.model == 'resnet18':
             return self.model(images)
         raise NotImplementedError
+    
+    def featurize(self,x,num_samples=1,return_dist=False):
+        _,features = self.model(x)
+        z_mu = features[:,:self.args.z_dim]
+        z_sigma = F.softplus(features[:,self.args.z_dim:])
+        z_dist = distributions.Independent(distributions.normal.Normal(z_mu,z_sigma),1)
+        z = z_dist.rsample([num_samples]).view([-1,self.args.z_dim])
+        if return_dist:
+            return z, (z_mu,z_sigma)
+        else:
+            return z
+    
+    def classify(self,z):
+        fc1 = nn.Linear(7 * 7 * 64, 2048)
+        fc2 = nn.Linear(2048, self.args.num_classes)
+        x = F.relu(fc1(z))
+        x = fc2(x)
+        return x
 
     def run_epoch(self):
         """
@@ -61,20 +83,37 @@ class Client:
         for cur_step, (images, labels) in enumerate(self.train_loader):
             images = images.cuda()
             labels = labels.cuda()
+            
+            #outputs = self.model(images)
+            z,(z_mu,z_sigma) = self.featurize(images,return_dist=True)
+            logits = self.classify(z)
+            loss = self.criterion(logits, labels)
+            obj = loss
+            regL2R = torch.zeros_like(obj)
+            regCMI = torch.zeros_like(obj)
+            if self.args.L2R_coeff != 0.0:
+                regL2R = z.norm(dim=1).mean()
+                obj = obj + self.L2R_coeff*regL2R
+
+            if self.args.CMI_coeff != 0.0:
+                r_sigma_softplus = F.softplus(self.r_sigma)
+                r_mu = self.r_mu[labels]
+                r_sigma = r_sigma_softplus[labels]
+                z_mu_scaled = z_mu*self.C
+                z_sigma_scaled = z_sigma*self.C
+                regCMI = torch.log(r_sigma) - torch.log(z_sigma_scaled) + \
+                        (z_sigma_scaled**2+(z_mu_scaled-r_mu)**2)/(2*r_sigma**2) - 0.5
+                regCMI = regCMI.sum(1).mean()
+                obj = obj + self.CMI_coeff*regCMI
 
             self.optimizer.zero_grad()
-
-            outputs = self.model(images)
-
-            loss = self.criterion(outputs, labels)
-
-            loss.backward()
-            running_loss += loss.item()
-
+            obj.backward()
+            running_loss += obj.item()
+            
             self.optimizer.step()
             i += 1
 
-            predictions = torch.argmax(outputs, dim=1)
+            predictions = torch.argmax(labels, dim=1)
 
             correct_predictions = torch.sum(torch.eq(predictions, labels)).item()
             tot_correct_predictions += correct_predictions

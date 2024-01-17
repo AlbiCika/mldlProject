@@ -67,8 +67,8 @@ class Client:
             return z
     
     def classify(self,z):
-        fc1 = nn.Linear(7 * 7 * 64, 2048)
-        fc2 = nn.Linear(2048, self.args.num_classes)
+        fc1 = nn.Linear(7 * 7 * 64, 2048).to(z.device)
+        fc2 = nn.Linear(2048, self.args.num_classes).to(z.device)
         x = F.relu(fc1(z))
         x = fc2(x)
         return x

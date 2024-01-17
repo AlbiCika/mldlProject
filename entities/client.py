@@ -97,24 +97,26 @@ class Client:
             #outputs = self.model(images)
             z,(z_mu,z_sigma) = self.featurize(images,return_dist=True)
             logits = self.classify(z)
+            print('im after logits')
+            print(logits.shape() , labels.shape())
             loss = self.criterion(logits, labels)
             obj = loss
             regL2R = torch.zeros_like(obj)
             regCMI = torch.zeros_like(obj)
-            if self.args.L2R_coeff != 0.0:
-                regL2R = z.norm(dim=1).mean()
-                obj = obj + 0.01*regL2R#remember to put L2R coefficient as argument
+        #if self.args.L2R_coeff != 0.0:
+            regL2R = z.norm(dim=1).mean()
+            obj = obj + 0.01*regL2R#remember to put L2R coefficient as argument
 
-            if self.args.CMI_coeff != 0.0:
-                r_sigma_softplus = F.softplus(self.r_sigma)
-                r_mu = self.r_mu[labels]
-                r_sigma = r_sigma_softplus[labels]
-                z_mu_scaled = z_mu*self.C
-                z_sigma_scaled = z_sigma*self.C
-                regCMI = torch.log(r_sigma) - torch.log(z_sigma_scaled) + \
-                        (z_sigma_scaled**2+(z_mu_scaled-r_mu)**2)/(2*r_sigma**2) - 0.5
-                regCMI = regCMI.sum(1).mean()
-                obj = obj + 0.001*regCMI#remember to put CMI coefficient as argument
+        #if self.args.CMI_coeff != 0.0:
+            r_sigma_softplus = F.softplus(self.r_sigma)
+            r_mu = self.r_mu[labels]
+            r_sigma = r_sigma_softplus[labels]
+            z_mu_scaled = z_mu*self.C
+            z_sigma_scaled = z_sigma*self.C
+            regCMI = torch.log(r_sigma) - torch.log(z_sigma_scaled) + \
+                    (z_sigma_scaled**2+(z_mu_scaled-r_mu)**2)/(2*r_sigma**2) - 0.5
+            regCMI = regCMI.sum(1).mean()
+            obj = obj + 0.001*regCMI#remember to put CMI coefficient as argument
 
             self.optimizer.zero_grad()
             obj.backward()

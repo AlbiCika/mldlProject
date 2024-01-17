@@ -54,8 +54,8 @@ class Client:
     
     def featurize(self,x,num_samples=1,return_dist=False):
         _,features = self.model(x)
-        z_mu = features[:,:self.z_dim]
-        z_sigma = F.softplus(features[:,self.z_dim:])
+        z_mu = features[:,:self.z_dim//2]
+        z_sigma = F.softplus(features[:,self.z_dim//2:])
         z_dist = distributions.Independent(distributions.normal.Normal(z_mu,z_sigma),1)
         z = z_dist.rsample([num_samples]).view([-1,self.z_dim])
         if return_dist:

@@ -52,7 +52,7 @@ class Client:
             return self.model(images)
         raise NotImplementedError
     
-    def featurize(self,x,num_samples=1,return_dist=False):
+    def featurize(self,x,num_samples    =1,return_dist=False):
         print('Im in featurize 1')
         print(x.shape)
         self.model=self.model.cuda()
@@ -64,7 +64,10 @@ class Client:
         print(z_mu.shape , z_sigma.shape)
         z_sigma = z_sigma.to(x.device)
         z_dist = distributions.Normal(z_mu, z_sigma)
-        z = z_dist.rsample([num_samples]).view([-1, self.z_dim])
+        z = z_dist.rsample([num_samples])
+        print("z size before view:", z.size())
+        z = z.view([-1, self.z_dim])
+        print("z size after view:", z.size())
         print('Im in featurize 2')
         print(z.shape)
         if return_dist:

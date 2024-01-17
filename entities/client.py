@@ -64,7 +64,7 @@ class Client:
         print(z_mu.shape , z_sigma.shape)
         z_sigma = z_sigma.to(x.device)
         z_dist = distributions.Independent(distributions.normal.Normal(z_mu,z_sigma),1)
-        z = z_dist.rsample([num_samples]).transpose(0, 1).contiguous().view([-1, self.z_dim])
+        z = z_dist.rsample([num_samples]).view(-1,self.z_dim)
         print('Im in featurize 2')
         print(z.shape)
         if return_dist:

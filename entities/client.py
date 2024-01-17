@@ -87,6 +87,7 @@ class Client:
             
             #outputs = self.model(images)
             z,(z_mu,z_sigma) = self.featurize(images,return_dist=True)
+            z.cuda()
             logits = self.classify(z)
             loss = self.criterion(logits, labels)
             obj = loss

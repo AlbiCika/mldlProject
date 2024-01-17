@@ -22,7 +22,7 @@ class Client:
         self.name = self.dataset.client_name
         self.model = model
         self.idx = idx
-        self.z_dim=3136
+        self.z_dim=int(3136)
         self.train_loader = DataLoader(self.dataset, batch_size=self.args.bs,shuffle=True) if not test_client else None  # ,drop_last=True
         self.test_loader = DataLoader(self.dataset, batch_size=1, shuffle=False)
         self.optimizer = optimizer

@@ -32,6 +32,7 @@ class Client:
         self.r_mu = nn.Parameter(torch.zeros(args.num_classes,args.z_dim))
         self.r_sigma = nn.Parameter(torch.ones(args.num_classes,args.z_dim))
         self.C = nn.Parameter(torch.ones([]))
+        self.z_dim=3136
 
 
     def __str__(self):
@@ -53,10 +54,10 @@ class Client:
     
     def featurize(self,x,num_samples=1,return_dist=False):
         _,features = self.model(x)
-        z_mu = features[:,:self.args.z_dim]
-        z_sigma = F.softplus(features[:,self.args.z_dim:])
+        z_mu = features[:,:self.z_dim]
+        z_sigma = F.softplus(features[:,self.z_dim:])
         z_dist = distributions.Independent(distributions.normal.Normal(z_mu,z_sigma),1)
-        z = z_dist.rsample([num_samples]).view([-1,self.args.z_dim])
+        z = z_dist.rsample([num_samples]).view([-1,self.z_dim])
         if return_dist:
             return z, (z_mu,z_sigma)
         else:
@@ -93,7 +94,7 @@ class Client:
             regCMI = torch.zeros_like(obj)
             if self.args.L2R_coeff != 0.0:
                 regL2R = z.norm(dim=1).mean()
-                obj = obj + self.L2R_coeff*regL2R
+                obj = obj + 0.01*regL2R#remember to put L2R coefficient as argument
 
             if self.args.CMI_coeff != 0.0:
                 r_sigma_softplus = F.softplus(self.r_sigma)
@@ -104,7 +105,7 @@ class Client:
                 regCMI = torch.log(r_sigma) - torch.log(z_sigma_scaled) + \
                         (z_sigma_scaled**2+(z_mu_scaled-r_mu)**2)/(2*r_sigma**2) - 0.5
                 regCMI = regCMI.sum(1).mean()
-                obj = obj + self.CMI_coeff*regCMI
+                obj = obj + 0.001*regCMI#remember to put CMI coefficient as argument
 
             self.optimizer.zero_grad()
             obj.backward()

@@ -38,8 +38,8 @@ def get_parser():
     parser.add_argument('--num_rounds', type=int, default=5, help='number of rounds')
     parser.add_argument('--num_classes', type=int, default=62, help='number of classes')
     parser.add_argument('z_dim', type=int, default=3136, help='dimension of latent representation')
-    parser.add_argument('L2R_coeff', type=int, default=0.01, help='L2R coefficient alpha')
-    parser.add_argument('CMI_coeff', type=int, default=0.001, help='CMI coefficient alpha')
+    parser.add_argument('L2R_coeff', type=float, default=0.01, help='L2R coefficient alpha')
+    parser.add_argument('CMI_coeff', type=float, default=0.001, help='CMI coefficient alpha')
     # keep the local epoc = 1 bcs of nnid setting risk overfitting
     parser.add_argument('--num_epochs', type=int, default=1, help='number of local epochs')
     parser.add_argument('--clients_per_round', type=int, default=5, help='number of clients trained per round')

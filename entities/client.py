@@ -56,6 +56,8 @@ class Client:
         _,features = self.model(x)
         z_mu = features[:,:int(self.z_dim/2)]
         z_sigma = F.softplus(features[:,int(self.z_dim/2):])
+        z_mu = z_mu.to(x.device)
+        z_sigma = z_sigma.to(x.device)
         z_dist = distributions.Independent(distributions.normal.Normal(z_mu,z_sigma),1)
         z = z_dist.rsample([num_samples]).view([-1,self.z_dim])
         if return_dist:
@@ -87,7 +89,6 @@ class Client:
             
             #outputs = self.model(images)
             z,(z_mu,z_sigma) = self.featurize(images,return_dist=True)
-            z.cuda()
             logits = self.classify(z)
             loss = self.criterion(logits, labels)
             obj = loss

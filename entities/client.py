@@ -61,16 +61,22 @@ class Client:
         z_sigma = z_sigma.to(x.device)
         z_dist = distributions.Independent(distributions.normal.Normal(z_mu,z_sigma),1)
         z = z_dist.rsample([num_samples]).view([-1,self.z_dim])
+        print('Im in featurize')
+        print(z.shape())
         if return_dist:
             return z, (z_mu,z_sigma)
         else:
             return z
     
     def classify(self,z):
+        print('im in classify')
+        print(z.shape())
         fc1 = nn.Linear(7 * 7 * 64, 2048).to(z.device)
         fc2 = nn.Linear(2048, self.args.num_classes).to(z.device)
         x = F.relu(fc1(z))
         x = fc2(x)
+        print('im in classify')
+        print(x.shape())
         return x
 
     def run_epoch(self):

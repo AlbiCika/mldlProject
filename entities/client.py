@@ -53,7 +53,7 @@ class Client:
         raise NotImplementedError
     
     def featurize(self,x,num_samples=1,return_dist=False):
-        _,features = self.model(x)
+        _,features = self.model(x.to(self.device))
         z_mu = features[:,:int(self.z_dim/2)]
         z_sigma = F.softplus(features[:,int(self.z_dim/2):])
         z_mu = z_mu.to(x.device)

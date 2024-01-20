@@ -30,8 +30,8 @@ class Client:
         self.reduction = HardNegativeMining() if self.args.hnm else MeanReduction()
         self.len_dataset = len(self.dataset)
         self.pk = None
-        self.r_mu = nn.Parameter(torch.zeros(args.num_classes,self.z_dim))
-        self.r_sigma = nn.Parameter(torch.ones(args.num_classes,self.z_dim))
+        self.r_mu = nn.Parameter(torch.zeros(args.num_classes,self.z_dim)).cuda()
+        self.r_sigma = nn.Parameter(torch.ones(args.num_classes,self.z_dim)).cuda()
         self.C = nn.Parameter(torch.ones([]))
 
 
@@ -118,8 +118,8 @@ class Client:
 
 
         #if self.args.CMI_coeff != 0.0:
-            r_sigma = r_sigma.cuda()
-            r_mu=r_mu.cuda()
+            self.r_sigma = self.r_sigma.cuda()
+            self.r_mu=self.r_mu.cuda()
             r_sigma_softplus = F.softplus(self.r_sigma)
             r_mu = self.r_mu[labels]
             r_sigma = r_sigma_softplus[labels]

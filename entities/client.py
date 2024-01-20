@@ -61,7 +61,7 @@ class Client:
         z_sigma = F.softplus(features[:,int(self.z_dim/2):])
         z_mu = z_mu.to(x.device)
         #print('printing z_mu and z_sigma')
-        print(z_mu.shape , z_sigma.shape)
+        #print(z_mu.shape , z_sigma.shape)
         z_sigma = z_sigma.to(x.device)
         z_dist = distributions.Normal(z_mu, z_sigma)
         z = z_dist.rsample([num_samples])

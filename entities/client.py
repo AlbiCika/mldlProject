@@ -229,7 +229,8 @@ class Client:
                 labels = labels.cuda()
 
                 features = self.model(images)
-                logits = self.classify(features)
+                z=self.featurize(features)
+                logits = self.classify(z)
                 #from the logits we get the actual class probabilities
 
                 _, predicted = torch.max(logits.data, 1)

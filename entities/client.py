@@ -137,7 +137,7 @@ class Client:
             
             self.optimizer.step()
             i += 1
-
+            print(labels.size)
             predictions = torch.argmax(labels, dim=1)
 
             correct_predictions = torch.sum(torch.eq(predictions, labels)).item()

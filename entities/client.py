@@ -79,7 +79,7 @@ class Client:
     def classify(self,z):
         print('im in classify')
         print(z.shape)
-        fc1 = nn.Linear(7 * 7 * 64, 2048).to(z.device)
+        fc1 = nn.Linear(7 * 7 * 32, 2048).to(z.device)
         fc2 = nn.Linear(2048, self.args.num_classes).to(z.device)
         x = F.relu(fc1(z))
         x = fc2(x)

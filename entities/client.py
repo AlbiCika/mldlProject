@@ -64,7 +64,7 @@ class Client:
         print(z_mu.shape , z_sigma.shape)
         z_sigma = z_sigma.to(x.device)
         z_dist = distributions.Normal(z_mu, z_sigma)
-        z = z_dist.rsample([num_samples])
+        z = z_dist.rsample([num_samples],sample_shape=([32,3136]))
         print("z size before view:", z.size())
         z = z.view([-1, int(self.z_dim/2)])
         print("z size after view:", z.size())

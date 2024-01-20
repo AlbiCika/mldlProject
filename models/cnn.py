@@ -9,7 +9,7 @@ class CNN(nn.Module):
 
         self.conv1 = nn.Conv2d(1, 32, kernel_size=5, padding=2)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=5, padding=2)
-        self.fc1 = nn.Linear(7 * 7 * 64, 2048)
+        self.fc1 = nn.Linear(7 * 7 * 32, 2048)
         self.fc2 = nn.Linear(2048, num_classes)
 
     def forward(self, x):

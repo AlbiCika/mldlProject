@@ -53,23 +53,23 @@ class Client:
         raise NotImplementedError
     
     def featurize(self,x,num_samples=1,return_dist=False):
-        print('Im in featurize 1')
-        print(x.shape)
+        #print('Im in featurize 1')
+        #print(x.shape)
         self.model=self.model.cuda()
         features = self.model(x)
         z_mu = features[:,:int(self.z_dim/2)]
         z_sigma = F.softplus(features[:,int(self.z_dim/2):])
         z_mu = z_mu.to(x.device)
-        print('printing z_mu and z_sigma')
+        #print('printing z_mu and z_sigma')
         print(z_mu.shape , z_sigma.shape)
         z_sigma = z_sigma.to(x.device)
         z_dist = distributions.Normal(z_mu, z_sigma)
         z = z_dist.rsample([num_samples])
-        print("z size before view:", z.size())
+        #print("z size before view:", z.size())
         z = z.view([-1, int(self.z_dim/2)])
-        print("z size after view:", z.size())
-        print('Im in featurize 2')
-        print(z.shape)
+        #print("z size after view:", z.size())
+        #print('Im in featurize 2')
+        #print(z.shape)
         if return_dist:
             return z, (z_mu,z_sigma)
         else:
@@ -77,14 +77,14 @@ class Client:
 
 
     def classify(self,z):
-        print('im in classify')
-        print(z.shape)
+        #print('im in classify')
+        #print(z.shape)
         fc1 = nn.Linear(7 * 7 * 32, 2048).to(z.device)
         fc2 = nn.Linear(2048, self.args.num_classes).to(z.device)
         x = F.relu(fc1(z))
         x = fc2(x)
-        print('im in classify')
-        print(x.shape)
+        #print('im in classify')
+        #print(x.shape)
         return x
 
 
@@ -107,8 +107,8 @@ class Client:
             #outputs = self.model(images)
             z,(z_mu,z_sigma) = self.featurize(images,return_dist=True)
             logits = self.classify(z)
-            print('im after logits')
-            print(logits.shape , labels.shape)
+            #print('im after logits')
+            #print(logits.shape , labels.shape)
             loss = self.criterion(logits, labels)
 
             obj = loss
@@ -228,14 +228,16 @@ class Client:
                 images = images.cuda()
                 labels = labels.cuda()
 
-                outputs = self.model(images)
+                features = self.model(images)
+                logits = self.classify(features)
+                #from the logits we get the actual class probabilities
 
-                _, predicted = torch.max(outputs.data, 1)
+                _, predicted = torch.max(logits.data, 1)
 
                 total += labels.size(0)
                 correct += torch.eq(predicted, labels).sum().item()
 
-                self.update_metric(metric, outputs, labels, key)
+                self.update_metric(metric, logits, labels, key)
         return total, correct
 
     def get_pk(self):

@@ -118,6 +118,8 @@ class Client:
 
 
         #if self.args.CMI_coeff != 0.0:
+            r_sigma = r_sigma.cuda()
+            r_mu=r_mu.cuda()
             r_sigma_softplus = F.softplus(self.r_sigma)
             r_mu = self.r_mu[labels]
             r_sigma = r_sigma_softplus[labels]

@@ -20,6 +20,6 @@ class CNN(nn.Module):
         x = F.max_pool2d(x, 2)
         x = x.view(-1, 7 * 7 * 64)
         features=x
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x,features
+        #x = F.relu(self.fc1(x))
+        #x = self.fc2(x)
+        return features

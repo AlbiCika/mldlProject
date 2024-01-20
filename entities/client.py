@@ -56,7 +56,7 @@ class Client:
         print('Im in featurize 1')
         print(x.shape)
         self.model=self.model.cuda()
-        _,features = self.model(x)
+        features = self.model(x)
         z_mu = features[:,:int(self.z_dim/2)]
         z_sigma = F.softplus(features[:,int(self.z_dim/2):])
         z_mu = z_mu.to(x.device)

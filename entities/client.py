@@ -66,7 +66,7 @@ class Client:
         z_dist = distributions.Normal(z_mu, z_sigma)
         z = z_dist.rsample([num_samples])
         print("z size before view:", z.size())
-        z = z.view([-1, self.z_dim/2])
+        z = z.view([-1, int(self.z_dim/2)])
         print("z size after view:", z.size())
         print('Im in featurize 2')
         print(z.shape)

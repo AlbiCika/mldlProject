@@ -52,7 +52,7 @@ class Client:
             return self.model(images)
         raise NotImplementedError
     
-    def featurize(self,x,num_samples    =1,return_dist=False):
+    def featurize(self,x,num_samples=1,return_dist=False):
         print('Im in featurize 1')
         print(x.shape)
         self.model=self.model.cuda()
@@ -94,6 +94,7 @@ class Client:
         :param cur_epoch: current epoch of training
         :param optimizer: optimizer used for the local training
         """
+
         # There is also scheduler for the learning rate that we will put later.
         # self.optim_scheduler.step()
         tot_correct_predictions = 0
@@ -139,6 +140,9 @@ class Client:
             i += 1
             print(labels.shape)
             predictions = torch.argmax(labels, dim=0)
+
+            print('This is the shape of the predictions')
+            print(predictions.shape)
 
             correct_predictions = torch.sum(torch.eq(predictions, labels)).item()
             tot_correct_predictions += correct_predictions

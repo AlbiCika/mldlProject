@@ -66,7 +66,7 @@ class Client:
         z_dist = distributions.Normal(z_mu, z_sigma)
         z = z_dist.rsample([num_samples])
         print("z size before view:", z.size())
-        z = z.view([-1, self.z_dim])
+        z = z.view([-1, self.z_dim/2])
         print("z size after view:", z.size())
         print('Im in featurize 2')
         print(z.shape)
@@ -74,7 +74,8 @@ class Client:
             return z, (z_mu,z_sigma)
         else:
             return z
-    
+
+
     def classify(self,z):
         print('im in classify')
         print(z.shape)
@@ -85,6 +86,7 @@ class Client:
         print('im in classify')
         print(x.shape)
         return x
+
 
     def run_epoch(self):
         """
@@ -114,6 +116,7 @@ class Client:
             regL2R = z.norm(dim=1).mean()
             obj = obj + 0.01*regL2R#remember to put L2R coefficient as argument
 
+
         #if self.args.CMI_coeff != 0.0:
             r_sigma_softplus = F.softplus(self.r_sigma)
             r_mu = self.r_mu[labels]
@@ -124,6 +127,7 @@ class Client:
                     (z_sigma_scaled**2+(z_mu_scaled-r_mu)**2)/(2*r_sigma**2) - 0.5
             regCMI = regCMI.sum(1).mean()
             obj = obj + 0.001*regCMI#remember to put CMI coefficient as argument
+
 
             self.optimizer.zero_grad()
             obj.backward()

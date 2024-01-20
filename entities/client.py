@@ -110,14 +110,13 @@ class Client:
             print('im after logits')
             print(logits.shape , labels.shape)
             loss = self.criterion(logits, labels)
+
             obj = loss
             regL2R = torch.zeros_like(obj)
             regCMI = torch.zeros_like(obj)
         #if self.args.L2R_coeff != 0.0:
             regL2R = z.norm(dim=1).mean()
             obj = obj + 0.01*regL2R#remember to put L2R coefficient as argument
-
-
         #if self.args.CMI_coeff != 0.0:
             self.r_sigma = self.r_sigma.cuda()
             self.r_mu=self.r_mu.cuda()
@@ -134,17 +133,14 @@ class Client:
 
             self.optimizer.zero_grad()
             obj.backward()
-            running_loss += obj.item()
-            
             self.optimizer.step()
+
             i += 1
+            running_loss += obj.item()
             print(labels.shape)
-            predictions = torch.argmax(labels, dim=0)
+            #accuracy = (logits.argmax(1)==labels).float().mean()
 
-            print('This is the shape of the predictions')
-            print(predictions.shape)
-
-            correct_predictions = torch.sum(torch.eq(predictions, labels)).item()
+            correct_predictions = torch.sum(torch.eq(logits.argmax(1), labels)).item()
             tot_correct_predictions += correct_predictions
 
         loss_for_this_epoch = running_loss / i

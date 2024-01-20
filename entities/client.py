@@ -63,7 +63,7 @@ class Client:
         #print('printing z_mu and z_sigma')
         #print(z_mu.shape , z_sigma.shape)
         z_sigma = z_sigma.to(x.device)
-        z_dist = distributions.Normal(z_mu, z_sigma)
+        z_dist = distributions.Independent(distributions.normal.Normal(z_mu,z_sigma),1)
         z = z_dist.rsample([num_samples])
         #print("z size before view:", z.size())
         z = z.view([-1, int(self.z_dim/2)])
